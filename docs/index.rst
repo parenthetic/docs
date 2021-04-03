@@ -15,6 +15,12 @@ Note: *We do not recommend using a PDF version of this guide. The docs are updat
    
    This community of contributors believes in "paying it forward," and individuals who are implementing these tools are asked to contribute by asking questions, helping improve documentation, and contributing in other ways. Have questions? Hop into `Gitter <https://gitter.im/nightscout/intend-to-bolus>`_ and ask anytime!
 
+.. DANGER:: 
+   **IMPORTANT SAFETY NOTICE**
+
+   The foundation of OpenAPS safety features discussed in this documentation are built on the safety features of the hardware used to build your system. It is critically important that you only use a tested, fully functioning FDA or CE approved insulin pump and CGM for closing an automated insulin dosing loop. Hardware or software modifications to these components can cause unexpected insulin dosing, causing significant risk to the user. If you find or get offered broken, modified or self-made insulin pumps or CGM receivers, *do not use* these for creating an OpenAPS system.
+   
+   Additionally, it is equally important to only use original supplies such as inserters, cannulas and insulin containers approved by the manufacturer for use with your pump or CGM. Using untested or modified supplies can cause CGM inaccuracy and insulin dosing errors. Insulin is highly dangerous when misdosed - please do not play with your life by hacking with your supplies.
 
 .. toctree::
    :maxdepth: 2
@@ -43,37 +49,37 @@ Note: *We do not recommend using a PDF version of this guide. The docs are updat
    Collect your data & prepare <docs/While You Wait For Gear/collect-data-and-prepare>
    Make Your First PR <docs/While You Wait For Gear/loops-in-progress>
    Setting up Nightscout  <docs/While You Wait For Gear/nightscout-setup>
-   Understand your Explorer Board rig <docs/While You Wait For Gear/understanding-your-Explorer-Board-rig>
-   Understand determine-basal (OpenAPS math) <docs/While You Wait For Gear/Understand-determine-basal>
-   Understanding netIOB calculations <docs/While You Wait For Gear/understanding-insulin-on-board-calculations>
+   Understand your rig <docs/While You Wait For Gear/understanding-your-Explorer-Board-rig>
+   Entering carbs & boluses </docs/While You Wait For Gear/entering-carbs-bolus>
+   How OpenAPS makes decisions <docs/While You Wait For Gear/Understand-determine-basal>
    Monitoring OpenAPS <docs/While You Wait For Gear/monitoring-OpenAPS>
    Preferences and Safety Settings <docs/While You Wait For Gear/preferences-and-safety-settings>
    Understanding your wifi options <docs/While You Wait For Gear/understanding-wifi-options>
    
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :glob:
    :caption: Build Your Rig
     
    Installing OpenAPS <docs/Build Your Rig/OpenAPS-install>
-   512/712 pump users <docs/Build Your Rig/x12-users>
    Tell us you’re looping <docs/Build Your Rig/keeping-up-to-date>
-
 
 .. toctree::
    :maxdepth: 2
    :glob:
    :caption: Customize-Iterate
 
+   Optimizing Your Settings <docs/Customize-Iterate/optimize-your-settings>
+   Offline Looping <docs/Customize-Iterate/offline-looping-and-monitoring>
    Enable Bluetooth tethering <docs/Customize-Iterate/bluetooth-tethering-edison>
+   Add more wifi to your rig <docs/Customize-Iterate/on-the-go-wifi-adding>
+   Useful apps for accessing your rig </docs/Customize-Iterate/useful-mobile-apps>
    IFTTT and Pebble buttons <docs/Customize-Iterate/ifttt-integration>
+   iPhone Shortcuts buttons <docs/Customize-Iterate/iPhone Shortcuts Integration>
    Autosens <docs/Customize-Iterate/autosens>
    Autotune <docs/Customize-Iterate/autotune>
    Understanding Autotune <docs/Customize-Iterate/understanding-autotune>
    oref1: SMB and UAM <docs/Customize-Iterate/oref1>
-   Offline Looping <docs/Customize-Iterate/offline-looping-and-monitoring>
-   Add more wifi to your rig <docs/Customize-Iterate/on-the-go-wifi-adding>
-   Useful mobile apps </docs/Customize-Iterate/useful-mobile-apps>
    Tips & tricks <docs/Customize-Iterate/usability-considerations>
    Update your rig in the future <docs/Customize-Iterate/update-your-rig>
    How to run oref0-setup.sh again <docs/Customize-Iterate/oref0-runagain>
@@ -88,6 +94,7 @@ Note: *We do not recommend using a PDF version of this guide. The docs are updat
    Pump-rig troubleshooting <docs/Troubleshooting/Pump-rig-communications-troubleshooting>
    CGM-rig troubleshooting <docs/Troubleshooting/CGM-rig-communications-troubleshooting>
    Rig-NS troubleshooting <docs/Troubleshooting/Rig-NS-communications-troubleshooting>
+   Flashing and updating Jubilinux <docs/Troubleshooting/Flashing-and-updating-Jubilinux>
 
 .. toctree::
    :maxdepth: 2
@@ -103,3 +110,4 @@ Note: *We do not recommend using a PDF version of this guide. The docs are updat
    :caption: Resources/Reference
    
    Resources <docs/Resources/index>
+   For Clinicians <docs/Resources/clinician-guide-to-OpenAPS>

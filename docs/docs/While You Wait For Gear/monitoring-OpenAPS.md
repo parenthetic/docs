@@ -5,12 +5,16 @@ There are two general groups of ways to monitor your rigs:
 * Online, meaning it requires the rig to have internet connectivity (via a wifi or hotspot/tethered connection)
 * Offline, meaning the rig does not have any internet connectivity
 
+![Examples of online and offline monitoring](../Images/Online_Offline_monitoring.jpg)
+
 ## The main ways of monitoring your rig ONLINE include:
 
 * [Papertrail](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#papertrail-remote-monitoring-of-openaps-logs-recommended)
-* [Accessing via SSH (either using an app on your phone, or your computer)](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-rig-via-ssh)
+* [Accessing via SSH (either using an app on your phone, or your computer)](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-online-rig-via-ssh)
 * [Nightscout](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/nightscout-setup.html)
+* AndroidAPS NS Client ([Download the app-nsclient-release APK from here](https://github.com/MilosKozak/AndroidAPS/releases).)
 * Pebble watch (your watchface of choice, such as [Urchin](https://github.com/mddub/urchin-cgm))
+* [Apache Chainsaw](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#apache-chainsaw)
 
 ********************************
 
@@ -18,7 +22,7 @@ There are two general groups of ways to monitor your rigs:
 
 * [Pancreabble](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#pancreabble-offline-connection-to-pebble-watch) (offline connection to your Pebble watch)
 * For Android users: "[Hot Button](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#hot-button-for-android-users)"
-* Accessing via SSH over Bluetooth
+* Accessing via [SSH over Bluetooth](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-offline-rig-via-ssh-over-bluetooth), or [by using a mobile router so your phone/rig can connect to the same network offline](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-offline-rig-via-ssh-when-your-phone-and-rig-are-connected-to-the-same-network)
 * For any phone type: [Creating a web page that can be accessed on the phone via the rig's IP address](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#offline-web-page-from-rig-for-any-phone-user)
 
 ********************************
@@ -40,7 +44,7 @@ See below for different ways to access your rig:
 
 ### If your computer and rig are on the same wifi network
 
-![If your computer and rig are on the same wifi network](../../Images/Computer_rig_same_wifi.png)
+![If your computer and rig are on the same wifi network](../Images/Computer_rig_same_wifi.png)
 
 #### For Mac computers
 
@@ -118,28 +122,75 @@ See below for different ways to access your rig:
 
 ![Windows serial login success](../Images/access_3.png)
 
+### autossh Reverse Tunnel
+
+If you have an ssh server that is always accessible on the Internet, you can use it as a known hop point to ssh into your rig as long as the rig has an Internet connection.
+
+On the rig, install autossh: `apt-get install autossh`
+
+Your ssh environment must be setup to use key based authentication. ([Basic instructions are here](https://www.debian.org/devel/passwordlessssh).)
+
+On the rig, add the lines below to the `/etc/ssh/ssh_config` file.
+```
+    ServerAliveInterval 60
+    ServerAliveCountMax 5
+```
+
+On the server, add the lines below to the `/etc/ssh/sshd_config` file.
+```
+    ClientAliveInterval 60
+    ClientAliveCountMax 5
+```
+
+The configuration values above ensure when the rig moves from wifi network to wifi network, it will require 5 minutes at most for autossh to establish a new link to the server.
+
+Test the ssh setup by executing autossh on the rig:
+```
+autossh -f -M 0 -T -N <userid>@<Internet server address> -o "ExitOnForwardFailure yes" -R 20201:localhost:22
+```
+
+Test ssh into the rig from another device by ssh to the internet server address on port `20201` instead of the default port `22`:
+
+-connect to the internet server
+-from that server:
+```
+ssh -l root -p 20201 localhost
+```
+
+Once the test are successful, add a line to your rig crontab to launch autossh at boot using the autossh command above:
+```
+@reboot autossh -f -M 0 -T -N <userid>@<Internet server address> -o "ExitOnForwardFailure yes" -R 20201:localhost:22
+```
 
 
 ********************************
-### Papertrail remote monitoring of OpenAPS logs (RECOMMENDED) 
+## Papertrail remote monitoring of OpenAPS logs (RECOMMENDED)
 
 If you want to remotely view the rig's logs/loops, you can use Papertrail service.  We HIGHLY recommend setting up this service for at least the first month of your OpenAPS use to help remotely and quickly troubleshoot your rig, if you have problems.  The first month of Papertrail comes with a very generous amount of free data.  If you decide you like the service, you can sign up for monthly plan.  Typically, the monthly cost for using Papertrail with OpenAPS is approximately $5-7 depending on how many rigs you use and how long you'd want to save old data.
 
-#### Get an account at Papertrail
+### Get an account at Papertrail
 
 Go to http://papertrailapp.com and setup a new account.  Choose to setup a new system.  Notice the header at the top of the new system setup that says the path and port that your logs will go to.  You’ll need that information later.
 
 ![Papertrail hosting information](../Images/papertrail_host.png)
 
-#### System logging 
+## System logging
 
-Login to your rig. If you need help with that, please see the [Accessing Your Rig](http://openaps.readthedocs.io/en/latest/docs/While You Wait For Gear/monitoring-OpenAPS.html#accessing-your-rig-via-ssh) section of these docs.  Copy and paste the code that is displayed in your new system setup's shaded box, as shown in the red arrowed area in the screen shot above. This will setup papertrail for just your syslogs.  But, we now will need to add more (aggregate) your logs such as pump-loop and ns-loop.
+Login to your rig. If you need help with that, please see the [Accessing Your Rig](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-online-rig-via-ssh) section of these docs.  Copy and paste the code that is displayed in your new system setup's shaded box, as shown in the red arrowed area in the screen shot above. This will setup papertrail for just your syslogs.  But, we now will need to add more (aggregate) your logs such as pump-loop and ns-loop.
 
-#### Aggregating logs
+### Aggregating logs
 
 * Copy and paste each of these four command lines, one at a time.  The screenshot below shows the successful results of each command.  The first command will run for a short time and end with similar information to the green box.  The remaining three commands will not display anything specific as a result of the command.
 
+For Intel Edison rigs, use:
+
 `wget https://github.com/papertrail/remote_syslog2/releases/download/v0.19/remote_syslog_linux_i386.tar.gz`
+
+For Raspberry Pi rigs, use:
+
+`wget https://github.com/papertrail/remote_syslog2/releases/download/v0.18-beta1/remote_syslog_linux_arm.tar.gz`
+
+Then, for either rig type, run:
 
 `tar xzf ./remote_syslog*.tar.gz`
 
@@ -177,7 +228,7 @@ type ESC and ":wq" to save changes and exit.
 
 Now you should be able to see your new logs in your papertrail, but we need to make it so this runs automatically when the rig is restarted.
 
-#### Install auto restart at reboot
+### Install auto restart at reboot
 
 * Create a new file that will restart the papertrail logging at reboot
 
@@ -218,7 +269,7 @@ and then go to your papertrailapp website to see the log
 
 ![papertrail log example](../Images/papertrail.png)
 
-#### Optimize Papertrail use
+### Optimize Papertrail use
 
 To make the most of your Papertrail logs, setting up some of your account settings and filters will help streamline your troubleshooting
 
@@ -250,7 +301,7 @@ Once you get your desired searches saved, it is an easy process to make them mor
 
 ![papertrail homescreen buttons](../Images/papertrail_home_buttons.png)
 
-#### Troubleshooting using Papertrail
+### Troubleshooting using Papertrail
 
 Papertrail can be very valuable to quickly troubleshoot a rig, because it is quite easy to see all the loops that log information about your rig's actions.  BUT, the way that the information comes into Papertrail is based on the time the action took place.  So, you'll be seeing information stream by that may or may not help you troubleshoot WHICH area your issues are.
 
@@ -266,7 +317,7 @@ First, let's start with messages that **ARE NOT ERRORS**
 
 ![papertrail homescreen buttons](../Images/error-messages.png)
 
-But, really, most of those messages are the normal course of the rig telling you what's going on.  Like "Hey, I seem to have disconnected from the wifi...I'm going to look for BT now.  Hold on.  I need to organize myself.  Bringing up my stuff I need to find BT.  Ok, found a BT device.  Well, I can connect to it, but some of the features I don't need...like an audio BT connection."  But, the rig doesn't speak English...it speaks code.  So, if you don't speak code...sometimes a filer for `network` might help you filter for the English bits of info a little better.  Here's what that same period of time looked like with a `network` filter applied.  It's a little more clear that my rig was changing from a BT tether to a wifi connection when you filter the results.
+But, really, most of those messages are the normal course of the rig telling you what's going on.  Like "Hey, I seem to have disconnected from the wifi...I'm going to look for BT now.  Hold on.  I need to organize myself.  Bringing up my stuff I need to find BT.  Ok, found a BT device.  Well, I can connect to it, but some of the features I don't need...like an audio BT connection."  But, the rig doesn't speak English...it speaks code.  So, if you don't speak code...sometimes a filter for `network` might help you filter for the English bits of info a little better.  Here's what that same period of time looked like with a `network` filter applied.  It's a little more clear that my rig was changing from a BT tether to a wifi connection when you filter the results.
 
 ![papertrail homescreen buttons](../Images/network-filter.png)
 
@@ -317,6 +368,61 @@ If your loop is failing, lights are staying on, and you see repeated error messa
 ![papertrail subg error message](../Images/subg_rfspy.png)
 
 ![papertrail subg lights](../Images/subg_rfspy2.jpg)
+
+## Apache-chainsaw
+![Apache picture](../Images/apache_chainsaw.jpg)
+If your computer and rig are on the same wifi network you can use Apache Chainsaw2 from a pc (running windows/mac/linux) to watch your logs. Chainsaw2 main advantages are:
+1) Easy setup.
+1) Strong filtering capabilities.
+1) Strong finding capabilities.
+1) Coloring capabilities.
+1) Adding marker capabilities.
+1) Logs can be searched for a long time (kept localy on the rig).
+1) Can tail new data.
+
+example picture:
+
+### To setup apache chainsaw on your computer, follow the following instructons:
+1) Download the following version of apache chainsaw from here: https://github.com/tzachi-dar/logging-chainsaw/releases/download/2.0.0.1/apache-chainsaw-2.0.0-standalone.zip (please note this version was changed to fit the openaps project, other releases of appach chainsaw will not work with a rpii).
+1) Unzip the file.
+1) On your pc, create a configuration file called openaps.xml with the following data (for example notepad openaps.xml):
+    ```
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <!DOCTYPE log4j:configuration >
+    <log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="true">
+       <appender name="A2" class="org.apache.log4j.ConsoleAppender">
+          <layout class="org.apache.log4j.SimpleLayout"/>
+       </appender>
+
+       <plugin name="VFSLogFileReceiver1" class="org.apache.log4j.chainsaw.vfs.VFSLogFilePatternReceiver">
+         <param name="fileURL" value="sftp://root:password@192.168.1.20:22/var/log/openaps/openaps-date.log"/>
+         <param name="name" value="sampleVFSLogFileReceiver1"/>
+         <param name="tailing" value="true"/>
+         <param name="timestampFormat" value="yyyy-MM-dd HH:mm:ss"/>
+         <param name="logFormat" value="TIMESTAMP LOGGER MESSAGE"/>
+         <param name="autoReconnect" value="false"/>
+         <param name="group" value="group"/>
+       </plugin>
+
+       <root>
+          <level value="debug"/>
+       </root>
+    </log4j:configuration>
+
+    ```
+    Make sure to replace the password, with your rig's password, and 192.168.1.20 with the ip/hostname of your rig.
+1) run chainsaw by the command: bin\chainsaw.bat (pc) or bin/chainsaw (linux and mac)
+1) From the file menu choose 'load chainsaw configuration'
+1) Choose use chainsaw configuration file.
+1) press open file.
+1) choose the file openaps.xml
+1) (optional) mark the checkbox "always start chainsaw with this configuration."
+
+Chainsaw has a welcome tab and a good tutorial, use them.
+Still here are a few highlights:
+1) To see only pump-loop you can either select 'focus on openaps.pump-loop.log' or on the refine focus on field enter 'logger==openaps.pump-loop'
+1) To filter only messages that contain the words 'autosens ratio' enter on the 'refine focus' logger==openaps.pump-loop && msg~='autosens ratio'
+1) To highlight lines that contain 'refine focus', enter msg~='autosens ratio' on the find tab.
 
 ********************************
 
@@ -445,6 +551,9 @@ By default the urchin_loop_on, and urchin_iob is set to true. You must manually 
 ### Hot Button - for Android users
 
 #### Purpose
+
+NOTE: The Hotbutton app linked below has disappeared from Google Play. There are several others available if you search "SSH Button", but the app setup instructions won't match exactlty.
+
 [Hot Button app](https://play.google.com/store/apps/details?id=crosien.HotButton) can be used to monitor and control OpenAPS using SSH commands. It is especially useful for offline setups. Internet connection is not required, it is enough to have the rig connected to your android smartphone using bluetooth tethering.
 
 #### App Setup 
@@ -467,72 +576,19 @@ To show your pump's battery status, you can set:
 After setting up the button, simply click it to execute the command. The results are displayed in the black text area below the buttons. You can change the font size of the text in the box, and you can add more buttons under the main Hot Button menu.  
 
 #### Temporary targets
-It is possible to use Hot Button application for setup of temporary targets.  This [script](https://github.com/lukas-ondriga/openaps-share/blob/master/start-temp-target.sh) generates the custom temporary target starting at the time of its execution. You need to edit the path to the openaps folder inside it.
+It is possible to use Hot Button application for setup of temporary targets.  The oref0 repo has a script named oref0-append-local-target that sets a temp target locally on the rig.
 
-To setup activity mode run:
-`./set_temp_target.sh "Activity Mode" 130`
+To set an activity mode target of 130 mg/dL for 60m, run:
+`oref0-append-local-temptarget 130 60`
 
-To setup eating soon mode run:
-`./set_temp_target.sh "Eating Soon" 80`
-
-The script is currently work in progress. The first parameter is probably not needed, it is there to have the same output as Nightscout produces. It is not possible to set different top and bottom target, but this could be easily added in the future. 
-To be able to use the script, the most straigtforward solution is to disable the download of temporary targets from Nightscout. To do that edit your openaps.ini and remove `openaps ns-temptargets` from ns-loop. 
+To set an eating soon mode target of 80 mg/dL for 30m, run:
+`oref0-append-local-temptarget 80 30`
 
 #### SSH Login Speedup
 To speed up the command execution you can add to the `/etc/ssh/sshd_config` the following line:
 `UseDNS no`
 
 ********************************
-### HTTP Widget Offline Monitoring (Android Only)
-Android "HTTP widget" allows you to show text inside the widget, perfect for OpenAPS monitoring without using Nightscout (in case no internet access is available).
-
-A. Install "HTTP widget" on your Android phone:
-
-https://play.google.com/store/apps/details?id=net.rosoftlab.httpwidget1&hl=en
-
-B. Install jq:
-
-`sudo apt-get install jq`
-
-C. Add a cron line to your crontab to start the Simple HTTP Server:
-
-First `crontab -e` and then at the bottom of the page, then add
-
-`@reboot cd /root/myopenaps/enact && python -m SimpleHTTPServer 1337`.
-
-Then ctrl-X and select y to keep changes, and then Enter to keep the same file name.
-
-D. Add a line to your openaps alias in your openaps.ini:
-
-First `cd myopenaps` and then `nano openaps.ini`.
-
-Scroll down until you see the "Alias" list. Then copy and paste the following text into a new line directly under the other alias entires. 
-
-`http-widget = ! bash -c "( jq .timestamp ~/myopenaps/enact/enacted.json | awk '{print substr($0,13,5)}' | tr '\n' ' ' && echo \"(last enact)\" && jq -r .reason ~/myopenaps/enact/enacted.json && echo -n 'TBR: ' && jq .rate ~/myopenaps/enact/enacted.json && echo -n 'IOB: ' && jq .IOB ~/myopenaps/enact/enacted.json && echo -n 'Autosens: ' && jq .ratio ~/myopenaps/settings/autosens.json && echo -n 'Edison: ' && (~/src/EdisonVoltage/voltage short) | awk '{print $2,$1}' && echo -n 'Pump: ' && cat ~/myopenaps/monitor/reservoir.json && echo -n 'U ' && jq .voltage ~/myopenaps/monitor/battery.json | tr '\n' 'v' && echo \" \")> ~/myopenaps/enact/index.html"`
-
-E. Modify the openaps pump-loop cron line (openaps http-widget needs to be run each minute):
-
-Enter `crontab -e` again.
-
-Then find the pump-loop cron line (looks similar to `* * * * * cd /root/myopenaps && ( ps aux | grep -v grep | grep -q 'openaps pump-loop' || openaps pump-loop ) 2>&1 | tee -a /var/log/openaps/pump-loop.log`) 
-
-And then add this to the end of it `&& openaps http-widget > /dev/null 2>&1 `.
-
-When you're finished it should look something like this:
-
-`* * * * * cd /root/myopenaps && ( ps aux | grep -v grep | grep -q 'openaps pump-loop' || openaps pump-loop ) 2>&1 | tee -a /var/log/openaps/pump-loop.log && openaps http-widget > /dev/null 2>&1 ` 
-
-Ctrl-X and select y to save changes.
-
-F. Add Widget:
-
-On your Android phone, add an HTTP widget as you would normally add widgets. Then set up the http with your rig IP address using port 1337. 
-
-NOTE: BE SURE your phone and rig are on the same network, i.e. BT tethered or wifi hotspot. This widget will also work when your rig is online with a wifi connection, as long as your phone and rig are on the same network.
-
-G. Add Widget to Sony Smart Watch 3 or other Android Wear:
-
-Using the Wearable Widgets app, you can see the HTTP Widget on your watch. 
 
 ### Accessing your offline rig via SSH over Bluetooth
 
@@ -545,9 +601,38 @@ Your phone and rig must be BT paired and connected over BT PAN. See https://open
 
 Click Save in the upper right corner. You should now see the host you just created. If you click on that host, you’ll see a message that it is connecting (first time connections will ask if you want to save the rig to known hosts, cick continue and then you’ll be connected to a terminal app screen. You can now issue commands and edit files just like you can over an SSH connection from your computer.
 
+### Accessing your offline rig via SSH when your phone and rig are connected to the same network
+
+Just like the trick for getting internet to your rig through a network that requires you to log in via a portal (a "captive" network), a mobile router (e.g. [HooToo](https://www.hootoo.com/network-devices.html)) or other brand) can create a network that allows your phone and rig both to be connected, allowing you to then SSH into your rig, just as if they were connected via cellular. 
+
+You can then use the [same methods to SSH in for the phone or computer (that you're using to SSH) being on the same network as the rig](http://openaps.readthedocs.io/en/latest/docs/While%20You%20Wait%20For%20Gear/monitoring-OpenAPS.html#accessing-your-online-rig-via-ssh).
+
+Note: you will want to set your mobile router up in advance, and give it the same network name and password as a network already on your rig; or otherwise make sure to add the network and password to your rig before you travel and want to use this offline. 
+
+Generally, the steps for getting online with the HooToo, which you should practice with before you travel:
+* Plug in the HooToo/turn it on.
+* Use your phone or computer and join the HooToo network.
+* If you plan to loop offline and just want to SSH in, you should be able to SSH in and see your logs.
+
+For using the HooToo to join plane or hotel wifi, after you've joined the HooToo router network:
+* Open a browser and type in a URL (e.g. `cnn.com`) and hit enter. This should redirect you to the HooToo log in page.
+* Follow your router's instructions for how to get to the network page and scan and click to join the right network. 
+* Open another tab, type a URL again (e.g. `cnn.com`) and hit enter. This should take you to the login page (e.g. GoGo or the captive portal of the hotel wifi). Input your credentials or otherwise log in. Once you're successfully through that step, the router is online and will begin sharing the internet connectivity with the other devices that are joined to the network. 
 ********************************
 
 ### Offline web page from rig - for any phone user
+
+Starting with oref0 0.6.1, you can enable a rig hosted offline webpage that can be accessed over a local LAN. To do this, simply open a web browser and go to your rig's IP address. In most cases, this will be in the format 192.168.x.x
+
+![Successful pump-loop](../Images/offline_webpage_3.png) ![Unsuccessful pump-loop](../Images/offline_webpage_1.png)
+
+The box around your current BG will be either green or red, depending on the last time OpenAPS was able to successfully complete a pump-loop. The box functions similarly to the OpenAPS pill in Nightscout. If you tap on it, you will be able to view more info about the current state of your rig and its decision making process. 
+
+![Offline webpage OpenAPS pill](../Images/offline_webpage_2.png)
+
+NOTE: If the webpage does not load, check your crontab. On master (oref0 version 0.6.x) your crontab should contain the line `@reboot cd ~/src/oref0/www && export FLASK_APP=app.py && flask run -p 80 --host=0.0.0.0` You can check this by logging into your rig and typing `crontab -l`. If you need to edit your crontab the command is `crontab -e`.
+
+### Old instructions for an offline webpage. It is HIGHLY recommended that you use the method above for oref0 0.6.0 or greater.
 
 **TODO** - implement this as a proper oref0 script that can be installed by oref0-setup
 
@@ -567,11 +652,12 @@ touch ~/myopenaps/enact/index.html
 (echo -n 'Edison Battery: ' && cat ~/myopenaps/monitor/edison-battery.json | jq -r .battery | tr '\n' ' ' && echo '%') >> ~/myopenaps/enact/index.html
 (echo -n 'Insulin Remaining: ' && cat ~/myopenaps/monitor/reservoir.json) >> ~/myopenaps/enact/index.html
 ```
+
+Create the above script by running `nano /root/myopenaps/http.sh` , then paste the above, and save it.
+
 You may need to adjust the values in `'{print substr($0,12,5)}'` - whilst I know these work on the rigs I have set them up on, other's have had better results with `{print substr($0,13,5)}'`
 
-It can be set up where you choose, either in your openaps directory or at root.
-
-B. You will also need to start up the SimpleHTTPserver service that is already installed on jubilinux in the location you will place your file. This is done by adding the following line to your Cron:
+B. You will also need to start up the SimpleHTTPserver service that is already installed on jubilinux in the location you will place your file. This is done by adding the following line to your Cron (refer to the [resources](http://openaps.readthedocs.io/en/latest/docs/Resources/index.html) section for help on editing crontabs):
 
 ```
 @reboot cd /root/myopenaps/enact && python -m SimpleHTTPServer 1337
@@ -579,7 +665,7 @@ B. You will also need to start up the SimpleHTTPserver service that is already i
 The final thing to do is to make sure the script runs regularly to collect the data and publish it. This requires an additional cron line:
 
 ```
-*/5 * * * * (bash /root/http.sh) 2>&1 | tee -a /var/log/openaps/http.log
+*/5 * * * * (bash /root/myopenaps/http.sh) 2>&1 | tee -a /var/log/openaps/http.log
 ```
 In this case the script is running from the /root directory and I am publishing to the ~/myopenaps/enact directory.
 
@@ -587,6 +673,6 @@ C. Accessing via your phone
 
 **IPHONE USERS:** To access this from an iphone browser, enter something like the following: http://172.20.10.x:1337/index.html and you should receive an unformatted html page with the data in it. The value you need will be the ip address you see when you first set up bluetooth on your rig, and can be found using `ifconfig bnep0` when your rig is connected to your phone via bluetooth.  If you want to improve the output for a browser, the script can be modified to generate html tags that will allow formatting and could provide colouring if various predicted numbers were looking too low.
 
-**ANDROID USERS:** On Android, you can download http-widget (https://play.google.com/store/apps/details?id=net.rosoftlab.httpwidget1&hl=en_GB) and add a widget to your home screen that will display this data. You will need the IP address that your rig uses. If you are using xdrip as your glucose data source, it is the same as the value you use there.
+**ANDROID USERS:** On Android, you can download [http-widget](https://play.google.com/store/apps/details?id=com.axgs.httpwidget&hl=en_US) and add a widget to your home screen that will display this data. You will need the IP address that your rig uses. If you are using xdrip as your glucose data source, it is the same as the value you use there.
 
-**SAMSUNG GEAR S3 WATCH USERS:** If you use a Samsung Gear S3 watch, you can use the above http-widget with Wearable Widgets (http://wearablewidgets.com) to view what OpenAPS is doing locally, without internet connection.
+**SAMSUNG GEAR S3 WATCH USERS:** If you use a Samsung Gear S3 watch, you can use the above http-widget with [Wearable Widgets](http://wearablewidgets.com) to view what OpenAPS is doing locally, without internet connection.

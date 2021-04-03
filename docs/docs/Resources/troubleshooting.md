@@ -1,6 +1,29 @@
-# Troubleshooting
+﻿# Troubleshooting
 
 Even those who follow this documentation precisely are bound to end up stuck at some point. This could be due to something unique to your system, a mistyped command, actions performed out of order, or even a typo in this guide. This section provides some tools to help diagnose the issue as well as some common errors that have been experienced and resolved before. If you get stuck, try re-reading the documentation again and after that, share what you've been working on, attempted steps to resolve, and other pertinent details in [#intend-to-bolus in Gitter](https://gitter.im/nightscout/intend-to-bolus) when asking for help troubleshooting. Here is also a [good blog post to read with tips on how to best seek help online to troubleshoot](https://diyps.org/2017/03/19/tips-for-troubleshooting-diy-diabetes-devices-openaps-or-otherwise/).
+
+What's on this page:
+
+- [Generally useful linux commands](#generally-useful-linux-commands)
+- [Dealing with npm run global-install errors](#dealing-with-npm-run-global-install-errors)
+- [Dealing with a corrupted git repository](#dealing-with-a-corrupted-git-repository)
+- [Debugging Disk Space Issues](#debugging-disk-space-issues)
+- [Environment variables](#environment-variables)
+- [Wifi and hotspot issues](#wifi-and-hotspot-issues)
+   * [My wifi connection keeps dropping or I keep getting kicked out of ssh](#my-wifi-connection-keeps-dropping-or-i-keep-getting-kicked-out-of-ssh)
+   * [I forget to switch back to home wifi and it runs up my data plan](#i-forget-to-switch-back-to-home-wifi-and-it-runs-up-my-data-plan)
+   * [I am having trouble consistently connecting to my wifi hotspot when I leave the house](#i-am-having-trouble-consistently-connecting-to-my-wifi-hotspot-when-i-leave-the-house)
+   * [I am not able to connect to my wireless access point on my iPhone](#i-am-not-able-to-connect-to-my-wireless-access-point-on-my-iphone)
+- [Common error messages](#common-error-messages)
+   * [Don't have permission, permission not allowed, etc](#permission-not-allowed)
+   * [ValueError: need more than 0 values to unpack](#valueerror-need-more-than-0-values-to-unpack)
+   * [Unable to upload to Nightscout](#unable-to-upload-to-Nightscout)
+   * [No JSON object could be decoded](#no-json-object-could-be-decoded)
+   * [json: error: input is not JSON](#json-error-input-is-not-json)
+   * [TypeError: Cannot read property 'zzzz' of undefined](#typeerror-cannot-read-property-zzzz-of-undefined)
+   * [Could not parse carbratio date when invoking profile report](#could-not-parse-carbratio-date-when-invoking-profile-report)
+   * [Could not get subg rfspy state or version ccprog](#could-not-get-subg-rfspy-state-or-version-ccprog)
+   * [Dealing with the CareLink USB Stick](#dealing-with-the-carelink-usb-stick)
 
 ## Generally useful linux commands
 
@@ -58,7 +81,7 @@ then run `cd ~/src/oref0 && git checkout master && git pull` or if you are runni
 
 then run `cd ~/src/oref0 && npm run global-install` and then re-run oref0-setup.
 
-## Dealing with a corrupted git repository (pre-oref0 0.6.0)
+## Dealing with a corrupted git repository
 
 In oref0 versions prior to oref0 0.6.0, OpenAPS used git as the logging mechanism, so it commits report changes on each report invoke. Sometimes, due to "unexpected" power-offs (battery dying, unplugging, etc.),the git repository gets broken. You may see an error that references a loose object, or a corrupted git repository. To fix a corrupted git repository you can run `oref0-reset-git`, which will first run `oref0-fix-git-corruption` to try to fix the repository, and in case when repository is definitely broken it copies the .git history to a temporary location (`tmp`) and initializes a new git repo. In some versions of oref0 (up to 0.5.5), `oref0-reset-git` is in cron so that if the repository gets corrupted it can quickly reset itself. 
 
@@ -70,7 +93,7 @@ oref0 0.6.x and beyond will not use git and will not have git-related errors to 
 
 ## Debugging Disk Space Issues
 
-If you are having errors related to disk space shortages as determined by `df -h` you can use a very lightweight and fast tool called ncdu (a command-line disk usage analyzer) to determine what folders and files on your system are using the most disk space. You can install ncdu as follows: `sudo apt-get install ncdu`. You can run it by running the following command: `cd / && sudo ncdu` and follow the interactive screen to find your disk hogging folders.
+If you are having errors related to disk space shortages as determined by `df -h`, but you still have some room on your /root drive (i.e., it is not 100% in use), you can use a very lightweight and fast tool called ncdu (a command-line disk usage analyzer) to determine what folders and files on your system are using the most disk space. You can install ncdu as follows: `sudo apt-get install ncdu`. You can run it by running the following command: `cd / && sudo ncdu` and follow the interactive screen to find your disk hogging folders.
 
 An alternative approach to disk troubleshooting is to simply run the following command from the base unix directory after running `cd /`:
 
@@ -78,37 +101,43 @@ An alternative approach to disk troubleshooting is to simply run the following c
 
 Then, based on which folders are using the most space cd to those folders and run the above du command again until you find the folder that is using up the disk space.
 
-It is common that log files are the cause for disk space issues. If you determine that log file(s) are the problem, use a command like `less` to view the last entries in the logfile to attempt to figure out what is causing the logfile to fill up. To temporarily free up space, you can force the logfiles to rotate immediately by running the following command:
+One potential culprit can be cached software packages, which can be removed with `sudo apt-get clean` and/or `sudo apt-get autoremove --purge`
+
+It is also common that log files (i.e., the /var/log directory) are the cause for disk space issues. If you determine that log file(s) are the problem, use a command like `less` to view the last entries in the logfile to attempt to figure out what is causing the logfile to fill up. If you still have some room on your /root drive (i.e., it is not 100% in use according to `df /root`), you can temporarily free up space by forcing the logfiles to rotate immediately, with the following command:
 
 `logrotate -f /etc/logrotate.conf`
 
+If your /root drive is 100% in use according to `df /root`, you may need to free up space by removing log files. It should be safe to remove archived log files with the command `rm /var/log/*.[0-9] /var/log/*.gz`. Check again with `df /root` that you have plenty of space - normally your /root drive should have 80% or less space in use. If you have more in use but still less than 100% you can use one of the above techniques to free more space. 
+
+If your disk is still 100% full, you may have to remove a live log file. Run the command `du /var/log/openaps/* /var/log/*|sort -n |tail -5`, which will show the largest 5 log files. Pick the largest file, use the command `less` to view the last entries to determine if there is a problem, and when you're sure you don't need the file any longer you can use the command `rm log_file_name` to delete it (replace log_file_name with the large log file's name). You should `reboot` after removing any of the live log files so the system resumes logging properly.
+
 ## Environment variables
 
-If you are getting your BG from Nightscout or you want to upload loop status/results to Nightscout, among other things you'll need to set 2 environment variables: `NIGHTSCOUT_HOST` and `API_SECRET`. If you do not set and export these variables you will receive errors while running `openaps report invoke monitor/ns-glucose.json` and while executing `ns-upload.sh` script which is most probably part of your `upload-recent-treatments` alias.Make sure your `API_SECRET` is in hashed format. Please see [this page](https://github.com/openaps/oref0#ns-upload-entries) for details. Additionally, your `NIGHTSCOUT_HOST` should be in a format like `http://yourname.herokuapp.com` (without trailing slash). For the complete visualization guide use [this page](https://github.com/openaps/docs/blob/master/docs/Automate-system/vizualization.md) from the OpenAPS documentation.
+If you are getting your BG from Nightscout or you want to upload loop status/results to Nightscout, among other things you'll need to set 2 environment variables: `NIGHTSCOUT_HOST` and `API_SECRET`. If you do not set and export these variables you will receive errors while running `openaps report invoke monitor/ns-glucose.json` and while executing `ns-upload.sh` script which is most probably part of your `upload-recent-treatments` alias.Make sure your `API_SECRET` is in hashed format. Please see [this page](https://github.com/openaps/oref0#ns-upload-entries) or [this issue](https://github.com/openaps/oref0/issues/397) for details. Additionally, your `NIGHTSCOUT_HOST` should be in a format like `http://yourname.herokuapp.com` (without trailing slash). For the complete visualization guide use [this page](https://github.com/openaps/docs/blob/master/docs/Automate-system/vizualization.md) from the OpenAPS documentation.
 
 ## Wifi and hotspot issues
 
-### My wifi connection keeps dropping and/or I keep getting kicked out of ssh
+### My wifi connection keeps dropping or I keep getting kicked out of ssh
 There is a script that you can add to your root cron that will test your connection and reset it if it is down. Here is an example that runs every two minuntes (odd minutes). You could also do it every 5 minutes or less. Note, this does not have to be for an Edison, you can set this up for a Pi, etc as well.
 
 ```
 cd ~/src
 git clone https://github.com/TC2013/edison_wifi
 cd edison_wifi
-chmod 0755 /home/edison/src/edison_wifi/wifi.sh
+chmod 0755 /root/src/edison_wifi/wifi.sh
 ```
 Next, add the script to your root cron. Note this is a different cron that what your loops runs on, so when you open it don't expect to see your loop and other items you have added.
   * Log in as root ```su root```
   * Edit your root cron ```crontab -e```
-  * Add the following line ```1-59/2 * * * * /home/edison/src/edison_wifi/wifi.sh google.com 2>&1 | logger -t wifi-reset```
+  * Add the following line ```1-59/2 * * * * /root/src/edison_wifi/wifi.sh google.com 2>&1 | logger -t wifi-reset```
 
 ### I forget to switch back to home wifi and it runs up my data plan
-You can add a line to your cron that will check to see if <YOURWIFINAME> is avaiable and automatically switch to it if you are on a different network.
+You can add a line to your cron that will check to see if `<YOURWIFINAME>` is available and automatically switch to it if you are on a different network.
   * Log in as root ```su root```
   * Edit your root cron ```crontab -e```
-  * Add the following line ```*/2 * * * * ( (wpa_cli status | grep <YOURWIFINAME> > /dev/null && echo already on <YOURWIFINAME>) || (wpa_cli scan > /dev/null && wpa_cli scan_results | egrep <YOURWIFINAME> > /dev/null && udo pa_cli select_network $(wpa_clilist_networks | grep jsqrd | cut -f 1) && echo switched to <YOURWIFINAME> && sleep 15 && (for i in $(wpa_cli list_networks | grep DISABLED | cut -f 1); do wpa_cli enable_network $i > /dev/null; done) && echo and re-enabled other networks) ) 2>&1 | logger -t wifi-select```
+  * Add the following line ```*/2 * * * * ( (wpa_cli status | grep <YOURWIFINAME> > /dev/null && echo already on <YOURWIFINAME>) || (wpa_cli scan > /dev/null && wpa_cli scan_results | egrep <YOURWIFINAME> > /dev/null && sudo wpa_cli select_network $(wpa_cli list_networks | grep jsqrd | cut -f 1) && echo switched to <YOURWIFINAME> && sleep 15 && (for i in $(wpa_cli list_networks | grep DISABLED | cut -f 1); do wpa_cli enable_network $i > /dev/null; done) && echo and re-enabled other networks) ) 2>&1 | logger -t wifi-select```
 
-### I am having trouble consistently connecting to my wifi hotspot when I leave the house (iPhone)
+### I am having trouble consistently connecting to my wifi hotspot when I leave the house
 When you turn on your hotspot it will only broadcast for 90 seconds and then stop (even if it is flipped on). So, when you leave your house you need to go into the hotspot setting screen (and flip on if needed). Leave this screen open until you see your rig has connected. It may only take a few seconds or a full minute.
 
 ### I am not able to connect to my wireless access point on my iPhone 
@@ -123,7 +152,7 @@ Consider changing your iPhone's name...  In most cases iPhone will set the phone
 
 These error messages may appear in response to openaps commands in the console, or in the system log (located at /var/log/syslog when using raspbian OS). Some errors can be safely ignored, like timeout errors that occur when the pump is out of range.
 
-### Don't have permission, permission not allowed, etc
+### Permission not allowed
 
 The command you are running likely needs to be run with root permissions, try the same command again with ```sudo ``` in front of it
 
@@ -137,13 +166,13 @@ chmod u+x myscript.sh
 
 A JSON file did not contain entries. It usually will self-resolve with the next successful pump history read.
 
-### Unable to upload to http//my-nightscout-website.com
+### Unable to upload to Nightscout
 
 OpenAPS has failed to upload to the configured nightscout website. If you're using a Medtronic CGM and no BG readings appear in nightscout, connect to your rig and the directory of your openaps app (default is myopenaps) run
 
 `openaps first-upload`
 
-### [No JSON object could be decoded](https://www.google.com/webhp?sourceid=chrome-instant&ion=1&espv=2&ie=UTF-8#safe=active&q=openaps+%27No+JSON+object+could+be+decoded%27)
+### No JSON object could be decoded
 
 Usually means the file does not exist. It usually will self-resolve with the next successful pump history read. If it recurs, you will need to [drill down](http://openaps.readthedocs.io/en/latest/docs/Troubleshooting/oref0-setup-troubleshooting.html#running-commands-manually-to-see-what-s-not-working-from-an-oref0-setup-sh-setup-process) to find the area where it is not successfully reading. 
 
@@ -161,7 +190,7 @@ example: `TypeError: Cannot read property 'rate' of undefined`
 
 Usually is related to a typo if you have manually been editing files. Otherwise, should self-resolve.
 
-### Could not parse carbratio_date when invoking profile report
+### Could not parse carbratio date when invoking profile report
 
     Could not parse carbratio_data.
     Feature Meal Assist enabled but cannot find required carb_ratios.
@@ -184,36 +213,119 @@ Below is correct definition
     remainder =
     insulin_sensitivities = settings/insulin_sensitivities.json
 
-### Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?
+### Could not get subg rfspy state or version ccprog or cannot connect to CC111x radio
 
-Basic steps using an Intel Edison with Explorer Board, checking with `killall -g oref0-pump-loop; openaps mmtune` to see if it is resolved yet:
-  * Make sure the Explorer board has not become loose and is sitting correctly on the Edison board
-  * Double check that your port in pump.ini is correct
+Full error is usually: 
+`Could not get subg_rfspy state or version. Have you got the right port/device and radio_type? (ccprog)`
+
+Or (on an intel edison):
+`cannot connect to CC111x radio on /dev/spidev5.1`
+
+Or (on a Raspberry Pi):
+`cannot connect to CC111x radio on /dev/spidev0.0`
+
+Basic steps using an Intel Edison with Explorer Board or a Raspberry Pi with Explorer HAT:
+  * checking with `cd ~/myopenaps && sudo service cron stop && `killall -g openaps ; killall-g oref0-pump-loop; oref0-mmtune && sudo service cron start` to see if it is resolved yet
+  * Make sure the Explorer board or HAT has not become loose and is sitting correctly on the Edison board or Pi
   * Check that your rig is in close range of your pump
   * Check that your pump battery is not empty
-  * Reboot your rig
-  * Run oref0-runagain
-  * Fully power down and start up your rig
+  * Reboot, or fully power down and start up your rig
 
-If you are using an Intel Edison with Explorer Board, and that does not resolve your issue, or if the two LEDs next to the microUSB ports on your Explorer board stay on even after an mmtune, you may need to re-flash your radio chip:
-  * Stop the reboot loop: `sudo service cron stop && killall -g oref0-pump-loop && shutdown -c`
+If you are using an Intel Edison with Explorer Board or a Raspberry Pi with Explorer HAT, and that does not resolve your issue, or if the two LEDs next to the microUSB ports on your Explorer board (respectively D1/D2 on Explorer HAT) stay on even after an mmtune, you may need to re-flash your radio chip:
+  * Stop the reboot loop: `sudo service cron stop && killall-g oref0-pump-loop && shutdown -c`
+  * (for versions >0.7.0) Install MRAA (you only need to do this once per rig): `oref0-mraa-install`
+  * Reboot manually, and if necessary stop the reboot loop again: `sudo service cron stop && killall-g oref0-pump-loop && shutdown -c`
   * Install ccprog tools on your Edison: `cd ~/src; git clone https://github.com/ps2/ccprog.git`
   * Build (compile) ccprog so you can run it: `cd ccprog; make ccprog`
   * Flash the radio chip:
+  
+#### Using an Intel Edision + Explorer Block:
 ```
 wget https://github.com/EnhancedRadioDevices/subg_rfspy/releases/download/v0.8-explorer/spi1_alt2_EDISON_EXPLORER_US_STDLOC.hex
 ./ccprog -p 19,7,36 erase
 ./ccprog -p 19,7,36 write spi1_alt2_EDISON_EXPLORER_US_STDLOC.hex
 ```
+If you receive an error saying that ccprog is only tested on C1110 chips then reboot the rig and try again. i.e.
+```
+reboot
+```
+Then:
+``` 
+cd ~/src/ccprog
+./ccprog -p 19,7,36 erase
+./ccprog -p 19,7,36 write spi1_alt2_EDISON_EXPLORER_US_STDLOC.hex
+```
 
-  * Reboot, and try `killall -g oref0-pump-loop; openaps mmtune` to make sure it works
+
+#### Using a Raspberry Pi + Explorer HAT:
+```
+wget https://github.com/EnhancedRadioDevices/subg_rfspy/releases/download/v0.8-explorer/spi1_alt2_EDISON_EXPLORER_US_STDLOC.hex
+./ccprog -p 16,18,7 reset
+./ccprog -p 16,18,7 erase
+./ccprog -p 16,18,7 write spi1_alt2_EDISON_EXPLORER_US_STDLOC.hex
+```
+
+  * Reboot, and try `cd ~/myopenaps && sudo service cron stop && killall -g openaps ; killall-g oref0-pump-loop; oref0-mmtune && sudo service cron start` to make sure it works
+  
+When you get errors like the following and the radio LEDs are constantly glowing,
+double check if the service loop is really stopped.
+```
+~/src/ccprog# ./ccprog -p 16,18,7 reset
+Using pins: DC=16, DD=18, RESET=7
+This code is only tested on CC1110. Unsupported chip id = 0x00.
+~/src/ccprog# ./ccprog -p 16,18,7 erase
+Using pins: DC=16, DD=18, RESET=7
+Erasing chip.
+This code is only tested on CC1110. Unsupported chip id = 0x00.
+Chip erase failed.
+```
+Repeat the preparation steps above to make sure the radio is not used before your flash attempt.
+Alternatively, you might want to rename the oref0 folder to make absolutely sure the loop service will not start.
+Rename it back to oref0 after you successfully flashed the radio chip.
+
+### Monitor/mmtune.json is empty or does not exist
+#### Only verified to work with Intel Edison + Explorer Block
+Full error is:
+```
+cannot connect to CC111x radio on /dev/spidev5.1
+1999/12/31 19:14:23 cc111x: no response
+monitor/mmtune.json is empty or does not exist
+```
+Trying to reflash the radio may result in:
+```
+Erasing chip.
+This code is only tested on CC1110. Unsupported chip id = 0x00.
+Chip erase failed.
+```
+If you're affected by this particular issue, the two LEDs next to the microUSB ports on your Explorer board may stay on continuously, or they may flash during loop attempts, but stay on between loops. If this is the case, you may need to completely reinstall OpenAPS. This requires redoing everything from the Jubilinux flash, to the bootstrap script and finally the OpenAPS setup. 
+
+**Note:** Starting the Jubilinux flash from the beginning will overwrite everything, so you may want to copy and save any configuration files you don't want to lose, like your `wpa_supplicant.conf` Wi-Fi settings for example. 
+
+Instructions to reinstall OpenAPS are [here](https://openaps.readthedocs.io/en/latest/docs/Build%20Your%20Rig/OpenAPS-install.html#step-1-jubilinux-for-edison-rigs-only)
+
+Once you have finished running the OpenAPS setup script, view your loop by entering `l`. Your loop will probably still be failing, but with a different error message:
+```
+Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?
+```
+Now you should be able to follow [the directions above](https://openaps.readthedocs.io/en/latest/docs/Resources/troubleshooting.html?highlight=ccprog#could-not-get-subg-rfspy-state-or-version-ccprog-or-cannot-connect-to-cc111x-radio) to reflash the radio.
+This time the reflash should be successful and you should see:
+```
+Erasing chip.
+Chip erased.
+root@yourrig:~/src/ccprog# ./ccprog -p 19,7,36 write spi1_alt2_EDISON_EXPLORES_STDLOC.hex
+```
+Press enter, then you should see:
+```
+Writing 2769 bytes to flash....
+```
+You have now successfully reflashed the radio. Now `reboot` and your loop should start running with red and green LEDs off (except for an occasional blink).
 
 
 ## Dealing with the CareLink USB Stick
 
 **Note:** Generally, the Carelink stick is no longer supported. We *highly* recommend moving forward with a different radio stick. See [the hardware currently recommended in the docs](http://openaps.readthedocs.io/en/latest/docs/Gear%20Up/hardware.html), or ask on Gitter. 
 
-The `model` command is a quick way to verify whether you can communicate with the pump. Test this with `openaps use <my_pump_name> model` (after you do a `killall -g oref0-pump-loop`).
+The `model` command is a quick way to verify whether you can communicate with the pump. Test this with `openaps use <my_pump_name> model` (after you do a `killall-g oref0-pump-loop`).
 
 If you can't get a response, it may be a range issue. The range of the CareLink radio is not particularly good, and orientation matters; see [range testing report](https://gist.github.com/channemann/0ff376e350d94ccc9f00) for more information.
 
